@@ -1,6 +1,6 @@
-from arxiv_fetcher import ArxivFetcher
-from bytedance_classifier import BytedanceClassifier
-from translator import Translator
+from url_tools.arxiv_fetcher import ArxivFetcher
+from bytedance_ai_tools.bytedance_classifier import BytedanceClassifier
+from bytedance_ai_tools.bytedance_translator import BytedanceTranslator
 
 def main():
     # 获取论文
@@ -8,7 +8,7 @@ def main():
     papers = fetcher.get_recent_papers()
     
     # 初始化翻译器和分类器
-    translator = Translator(
+    translator = BytedanceTranslator(
         use_ai=True,
         base_url="https://ark.cn-beijing.volces.com/api/v3",
         model_id="ep-20241122223516-96dll"
@@ -68,5 +68,5 @@ def main():
 if __name__ == "__main__":
     markdown = main()
     print(markdown)
-    with open("output.md", "w") as file:
+    with open("output.md", "w", encoding="utf-8") as file:
         file.write(markdown)

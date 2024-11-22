@@ -13,7 +13,7 @@ class ArxivFetcher:
         # 构建查询 - 添加 cs.CL 类别过滤
         search = arxiv.Search(
             query="cat:cs.CL",  # 添加 cs.CL 类别过滤
-            max_results=10, # debug 
+            max_results=1, # debug 
             sort_by=arxiv.SortCriterion.SubmittedDate
         )
 

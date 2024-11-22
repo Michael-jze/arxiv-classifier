@@ -2,7 +2,7 @@ from bytedance_ai_client import ByteDanceAIClient
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-class Translator:
+class BytedanceTranslator:
     def __init__(self, use_ai=True, base_url=None, model_id=None):
         self.ai_client = ByteDanceAIClient(
             use_ai=use_ai,
@@ -17,7 +17,6 @@ class Translator:
         if not self.ai_client.use_ai:
             return text
             
-        # 在线程池中运行异步代码
         future = self.thread_pool.submit(
             self._run_async_code,
             self.ai_client.generate_response(
@@ -29,4 +28,4 @@ class Translator:
         return result if result is not None else text
     
     def _run_async_code(self, coroutine):
-        return self.loop.run_until_complete(coroutine)
+        return self.loop.run_until_complete(coroutine) 
