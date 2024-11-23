@@ -1,6 +1,6 @@
 arxiv:
   days: 7
-  max_papers: 1
+  max_papers: 300
   search_query: "cat:cs.CL"
   sort_by: "lastUpdatedDate"
 

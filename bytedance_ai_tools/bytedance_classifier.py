@@ -12,7 +12,7 @@ def system_prompt(classify_types):
     返回格式为：["{classify_types[0]}","{classify_types[1]}"]"""
 
 class BytedanceClassifier:
-    def __init__(self, use_ai=True, base_url=None, model_id=None, classify_types=[], max_workers=None):
+    def __init__(self, use_ai=True, base_url=None, model_id=None, classify_types=[], max_workers=16):
         assert len(classify_types) > 0, "classify_types must be a non-empty list"
         self.ai_client = ByteDanceAIClient(
             use_ai=use_ai,
@@ -21,7 +21,6 @@ class BytedanceClassifier:
             default_system_prompt=system_prompt(classify_types)
         )
         self.thread_pool = ThreadPoolExecutor(max_workers=max_workers)
-        self.loop = asyncio.new_event_loop()
 
     def classify_paper(self, title, abstract):
         if not self.ai_client.use_ai:
@@ -29,17 +28,17 @@ class BytedanceClassifier:
             
         user_content = prompt_template(title, abstract)
         
-        # 在线程池中运行异步代码
-        future = self.thread_pool.submit(
-            self._run_async_code,
-            self.ai_client.generate_response(
-                user_content=user_content,
-                parse_json=True
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                self.ai_client.generate_response(
+                    user_content=user_content,
+                    parse_json=True
+                )
             )
-        )
-        result = future.result()
+        finally:
+            loop.close()
         
         return result if result is not None else "Global"
-    
-    def _run_async_code(self, coroutine):
-        return self.loop.run_until_complete(coroutine)
