@@ -1,4 +1,4 @@
-from bytedance_ai_client import ByteDanceAIClient
+from bytedance_ai_tools.bytedance_ai_client import ByteDanceAIClient
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 

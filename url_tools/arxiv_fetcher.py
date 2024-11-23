@@ -1,20 +1,40 @@
 import arxiv
 from datetime import datetime, timedelta, timezone
+from arxiv import SortCriterion, SortOrder
 
 class ArxivFetcher:
-    def __init__(self):
-        self.client = arxiv.Client()
+    def __init__(self, max_results=100, search_query="", sort_by="lastUpdatedDate"):
+        # Remove sort handling from client initialization
+        self.client = arxiv.Client(
+            page_size=100,
+            delay_seconds=3,
+            num_retries=3
+        )
+        
+        # Convert string to proper SortCriterion enum
+        if sort_by in ["lastUpdatedDate", "last"]:
+            self.sort_by = arxiv.SortCriterion.LastUpdatedDate
+        elif sort_by in ["submittedDate", "submitted"]:
+            self.sort_by = arxiv.SortCriterion.SubmittedDate
+        elif sort_by in ["relevance", "relevant"]:
+            self.sort_by = arxiv.SortCriterion.Relevance
+        else:
+            self.sort_by = arxiv.SortCriterion.LastUpdatedDate  # default fallback
+            
+        self.max_results = max_results
+        self.search_query = search_query
+        assert self.search_query != "", "search_query must be a non-empty string"
 
     def get_recent_papers(self, days=7):
         # 计算日期范围 - 使用 UTC 时区
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
         
-        # 构建查询 - 添加 cs.CL 类别过滤
+        # 构建查询 - 使用实例变量
         search = arxiv.Search(
-            query="cat:cs.CL",  # 添加 cs.CL 类别过滤
-            max_results=1, # debug 
-            sort_by=arxiv.SortCriterion.SubmittedDate
+            query=self.search_query,  # 使用传入的搜索查询
+            max_results=self.max_results,
+            sort_by=self.sort_by  # 使用传入的排序方式
         )
 
         papers = []

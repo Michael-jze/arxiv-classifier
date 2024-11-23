@@ -20,7 +20,9 @@ pip install -r requirements.txt
 
 参考字节跳动官方示例配置环境变量：
 ```bash
-export ARK_API_KEY="YOUR_API_KEY"
+export ARK_API_KEY="YOUR_API_KEY" # linux / macos
+$env:ARK_API_KEY = "YOUR_API_KEY" # windows powershell
+set ARK_API_KEY=YOUR_API_KEY # windows cmd
 ```
 
 ### 3. 运行程序

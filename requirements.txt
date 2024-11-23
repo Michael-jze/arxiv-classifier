@@ -3,3 +3,4 @@ requests
 python-dotenv
 pandas
 volcengine-python-sdk[ark]
+pyyaml
