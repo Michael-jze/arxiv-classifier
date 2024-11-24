@@ -1,9 +1,15 @@
 import arxiv
 from datetime import datetime, timedelta, timezone
 from arxiv import SortCriterion, SortOrder
+import warnings
 
 class ArxivFetcher:
     def __init__(self, max_results=100, search_query="", sort_by="lastUpdatedDate"):
+        warnings.warn(
+            "ArxivFetcher is deprecated. Use ArxivWebScraper instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         # Remove sort handling from client initialization
         self.client = arxiv.Client(
             page_size=100,
@@ -20,6 +26,8 @@ class ArxivFetcher:
             self.sort_by = arxiv.SortCriterion.Relevance
         else:
             self.sort_by = arxiv.SortCriterion.LastUpdatedDate  # default fallback
+
+        self.sort_by = arxiv.SortCriterion.SubmittedDate
             
         self.max_results = max_results
         self.search_query = search_query

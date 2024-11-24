@@ -7,6 +7,7 @@ import pdb
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import time
+from url_tools.arxiv_latest import ArxivWebScraper
 
 def load_config(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -18,21 +19,72 @@ def parse_args():
                       help='Path to configuration file (default: config.yaml)')
     return parser.parse_args()
 
+def process_paper(paper: dict, translator: BytedanceTranslator, classifier: BytedanceClassifier) -> tuple:
+    """
+    处理单篇论文：翻译和分类
+    
+    Args:
+        paper: 论文信息字典
+        translator: 翻译器实例
+        classifier: 分类器实例
+    
+    Returns:
+        tuple: (translated_paper, categories_list)
+    """
+    try:
+        # If AI translation is enabled, translate; otherwise use original content
+        if translator.ai_client.use_ai:
+            translated_paper = {
+                'title': translator.translate(paper['title']),
+                'abstract': translator.translate(paper['abstract']),
+                'url': paper['url']
+            }
+        else:
+            translated_paper = {
+                'title': paper['title'],
+                'abstract': paper['abstract'],
+                'url': paper['url']
+            }
+        
+        # 分类论文
+        # categories_list = classifier.classify_paper(paper['title'], paper['abstract'])
+        categories_list = ["others"]
+        return translated_paper, categories_list
+    except Exception as e:
+        print(f"Error processing paper {paper['title']}: {e}")
+        return None, None
+
 def main():
     start_time = time.time()
     args = parse_args()
     config = load_config(args.config)
     
-    # 获取论文
-    fetcher = ArxivFetcher(
-        max_results=config['arxiv']['max_papers'],
-        search_query=config['arxiv']['search_query'],
-        sort_by=config['arxiv']['sort_by']
-    )
+    # 初始化论文获取器
+    scraper = ArxivWebScraper()
     print(f"Fetching papers... Time elapsed: {time.time() - start_time:.2f}s")
-    papers = fetcher.get_recent_papers(days=config['arxiv']['days'])
-    print(f"Found {len(papers)} papers. Time elapsed: {time.time() - start_time:.2f}s")
     
+    # 从配置中获取要查询的分类
+    categories_to_fetch = config['arxiv']['categories']
+    papers = []
+    
+    # 获取每个分类的论文
+    for category in categories_to_fetch:
+        category_papers = scraper.get_latest_papers(
+            category=category,
+            max_results=config['arxiv']['max_papers']
+        )
+        papers.extend(category_papers)
+        print(f"Fetched {len(category_papers)} papers from {category}")
+    
+    print(f"Found {len(papers)} papers in total. Time elapsed: {time.time() - start_time:.2f}s")
+    
+    # 转换论文格式以适配后续处理
+    formatted_papers = [{
+        'title': paper['title'],
+        'abstract': paper.get('abstract', ''),
+        'url': paper['arxiv_url']
+    } for paper in papers]
+
     # 初始化翻译器和分类器
     translator = BytedanceTranslator(
         use_ai=config['api']['use_ai'],
@@ -48,26 +100,11 @@ def main():
     )
     categories = {}
     
-    def process_paper(paper):
-        try:
-            # 翻译标题和摘要
-            translated_paper = {
-                'title': translator.translate(paper['title']),
-                'abstract': translator.translate(paper['abstract']),
-                'url': paper['url']
-            }
-            
-            categories_list = classifier.classify_paper(paper['title'], paper['abstract'])
-            return translated_paper, categories_list
-        except Exception as e:
-            print(f"Error processing paper {paper['title']}: {e}")
-            return None, None
-
     print(f"Processing papers with translation and classification...")
     try:
         # 使用线程池并发处理论文
         with ThreadPoolExecutor(max_workers=16) as executor:
-            results = list(executor.map(process_paper, papers))
+            results = list(executor.map(lambda paper: process_paper(paper, translator, classifier), formatted_papers))
         
         print(f"Processing completed. Time elapsed: {time.time() - start_time:.2f}s")
         # 处理结果
@@ -88,14 +125,32 @@ def main():
     now = datetime.now(timezone.utc)
     start_date = now - timedelta(days=config['arxiv']['days'])
     markdown_output.append(f"# ArXiv Papers")
-    markdown_output.append(f"Search query: `{config['arxiv']['search_query']}`")
     markdown_output.append(f"Date range: {start_date.strftime('%Y-%m-%d')} to {now.strftime('%Y-%m-%d')}\n")
     
     for category, papers in categories.items():
         markdown_output.append(f"\n## {category}")
         for paper in papers:
             markdown_output.append(f"- [{paper['title']}]({paper['url']})")
-            markdown_output.append(f"  > {paper['abstract']}\n")
+            # Split abstract into lines and format each line with quote prefix
+            abstract_lines = paper['abstract'].split('\n')
+            for line in abstract_lines:
+                if len(line) > 200:  # Handle long lines by wrapping at 200 chars
+                    words = line.split()
+                    current_line = []
+                    current_length = 0
+                    for word in words:
+                        if current_length + len(word) + 1 <= 200:
+                            current_line.append(word)
+                            current_length += len(word) + 1
+                        else:
+                            markdown_output.append(f"  > {''.join(current_line)}")
+                            current_line = [word]
+                            current_length = len(word)
+                    if current_line:
+                        markdown_output.append(f"  > {''.join(current_line)}")
+                else:
+                    markdown_output.append(f"  > {line}")
+            markdown_output.append("")  # Add blank line after abstract
     
     markdown = "\n".join(markdown_output)
 
