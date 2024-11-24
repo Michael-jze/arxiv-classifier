@@ -44,19 +44,4 @@ class MarkdownWriter:
         """
         abstract_lines = abstract.split('\n')
         for line in abstract_lines:
-            if len(line) > 200:  # Handle long lines by wrapping at 200 chars
-                words = line.split()
-                current_line = []
-                current_length = 0
-                for word in words:
-                    if current_length + len(word) + 1 <= 200:
-                        current_line.append(word)
-                        current_length += len(word) + 1
-                    else:
-                        markdown_output.append(f"  > {' '.join(current_line)}")
-                        current_line = [word]
-                        current_length = len(word)
-                if current_line:
-                    markdown_output.append(f"  > {' '.join(current_line)}")
-            else:
-                markdown_output.append(f"  > {line}")
+            markdown_output.append(f"  > {line}")

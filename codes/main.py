@@ -46,10 +46,11 @@ def process_paper(paper: dict, translator: BytedanceTranslator, classifier: Byte
                 'abstract': paper['abstract'],
                 'url': paper['url']
             }
-        
-        # 分类论文
-        # categories_list = classifier.classify_paper(paper['title'], paper['abstract'])
-        categories_list = ["others"]
+        if classifier.ai_client.use_ai:
+            categories_list = classifier.classify_paper(paper['title'], paper['abstract'])
+        else:
+            categories_list = ["others"]
+
         return translated_paper, categories_list
     except Exception as e:
         print(f"Error processing paper {paper['title']}: {e}")

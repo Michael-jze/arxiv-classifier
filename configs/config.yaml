@@ -7,7 +7,7 @@ arxiv:
 api:
   base_url: "https://ark.cn-beijing.volces.com/api/v3"
   model_id: "ep-20241122223516-96dll"
-  use_ai: false
+  use_ai: true
 
 categories:
   - AI

@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from typing import List, Dict
 from datetime import datetime
 import re
+import time
+import shutil
 
 class ArxivWebScraper:
     def __init__(self):
@@ -10,6 +12,7 @@ class ArxivWebScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
+        self.terminal_width = shutil.get_terminal_size().columns or 80
 
     def get_latest_papers(self, category: str, max_results: int = None) -> List[Dict]:
         """
@@ -23,11 +26,14 @@ class ArxivWebScraper:
             包含论文信息的字典列表
         """
         # 构建URL
-        url = f"{self.base_url}/list/{category}/recent"
+        url = f"{self.base_url}/list/{category}/recent?skip=0&show=2000"
         
         try:
             # 获取网页内容
+            status_msg = f"Fetching papers from {url}"
+            print(status_msg.ljust(self.terminal_width), end="\r", flush=True)
             response = requests.get(url, headers=self.headers)
+            time.sleep(1)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             
@@ -121,7 +127,10 @@ class ArxivWebScraper:
         """
         try:
             url = f"{self.base_url}/abs/{paper_id}"
+            status_msg = f"Fetching abstract from {url}"
+            print(status_msg.ljust(self.terminal_width), end="\r", flush=True)
             response = requests.get(url, headers=self.headers)
+            time.sleep(1)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             
