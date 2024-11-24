@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import time
 from url_tools.arxiv_latest import ArxivWebScraper
+from markdown.writer import MarkdownWriter
 
 def load_config(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -15,8 +16,8 @@ def load_config(config_path):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='ArXiv Paper Fetcher and Classifier')
-    parser.add_argument('--config', type=str, default='config.yaml',
-                      help='Path to configuration file (default: config.yaml)')
+    parser.add_argument('--config', type=str, default='configs/config.yaml',
+                      help='Path to configuration file (default: configs/config.yaml)')
     return parser.parse_args()
 
 def process_paper(paper: dict, translator: BytedanceTranslator, classifier: BytedanceClassifier) -> tuple:
@@ -118,45 +119,10 @@ def main():
         print(f"Error during processing: {e}")
         exit(1)
         
-    # Build markdown string instead of printing
-    markdown_output = []
+    # Use MarkdownWriter instead of direct markdown generation
+    writer = MarkdownWriter(config['output']['file_path'])
+    writer.write_papers(categories, config)
     
-    # Add title with search range and time info
-    now = datetime.now(timezone.utc)
-    start_date = now - timedelta(days=config['arxiv']['days'])
-    markdown_output.append(f"# ArXiv Papers")
-    markdown_output.append(f"Date range: {start_date.strftime('%Y-%m-%d')} to {now.strftime('%Y-%m-%d')}\n")
-    
-    for category, papers in categories.items():
-        markdown_output.append(f"\n## {category}")
-        for paper in papers:
-            markdown_output.append(f"- [{paper['title']}]({paper['url']})")
-            # Split abstract into lines and format each line with quote prefix
-            abstract_lines = paper['abstract'].split('\n')
-            for line in abstract_lines:
-                if len(line) > 200:  # Handle long lines by wrapping at 200 chars
-                    words = line.split()
-                    current_line = []
-                    current_length = 0
-                    for word in words:
-                        if current_length + len(word) + 1 <= 200:
-                            current_line.append(word)
-                            current_length += len(word) + 1
-                        else:
-                            markdown_output.append(f"  > {''.join(current_line)}")
-                            current_line = [word]
-                            current_length = len(word)
-                    if current_line:
-                        markdown_output.append(f"  > {''.join(current_line)}")
-                else:
-                    markdown_output.append(f"  > {line}")
-            markdown_output.append("")  # Add blank line after abstract
-    
-    markdown = "\n".join(markdown_output)
-
-    print(f"Writing output file... Time elapsed: {time.time() - start_time:.2f}s")
-    with open(config['output']['file_path'], "w", encoding="utf-8") as file:
-        file.write(markdown)
     print(f"All done! Total time elapsed: {time.time() - start_time:.2f}s")
 
 if __name__ == "__main__":

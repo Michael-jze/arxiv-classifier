@@ -23,7 +23,7 @@ class ArxivWebScraper:
             包含论文信息的字典列表
         """
         # 构建URL
-        url = f"{self.base_url}/list/{category}/recent?skip=0&show=2000"
+        url = f"{self.base_url}/list/{category}/recent"
         
         try:
             # 获取网页内容
@@ -39,7 +39,11 @@ class ArxivWebScraper:
             
             papers = []
             # 查找所有论文条目
-            for dt, dd in zip(dlpage.find_all('dt'), dlpage.find_all('dd')):
+            articles = soup.find('dl', {'id': 'articles'})
+            if not articles:
+                return []
+            
+            for dt, dd in zip(articles.find_all('dt'), articles.find_all('dd')):
                 if max_results and len(papers) >= max_results:
                     break
                     
@@ -70,16 +74,14 @@ class ArxivWebScraper:
                         author_links = authors_div.find_all('a')
                         author_list = [a.text.strip() for a in author_links]
                     
-                    # 获取摘要
-                    abstract = dd.find('p', {'class': 'mathjax'})
-                    abstract = abstract.text.strip() if abstract else 'N/A'
+                    # 获取摘要 - 从单独的页面获取
+                    abstract = self._get_abstract(paper_id)
                     
                     # 获取主题分类
                     subjects_div = meta.find('div', {'class': 'list-subjects'})
                     if subjects_div:
                         primary_subject = subjects_div.find('span', {'class': 'primary-subject'})
                         primary_subject = primary_subject.text.strip() if primary_subject else 'N/A'
-                        # 获取所有主题（包括交叉列表）
                         subjects = subjects_div.text.replace('Subjects:', '').strip()
                     else:
                         primary_subject = 'N/A'
@@ -106,6 +108,38 @@ class ArxivWebScraper:
         except requests.RequestException as e:
             print(f"Error fetching papers: {e}")
             return []
+
+    def _get_abstract(self, paper_id: str) -> str:
+        """
+        从论文详情页获取摘要
+        
+        Args:
+            paper_id: arXiv论文ID
+        
+        Returns:
+            摘要文本
+        """
+        try:
+            url = f"{self.base_url}/abs/{paper_id}"
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # 在meta标签中查找摘要
+            meta_abstract = soup.find('meta', {'name': 'citation_abstract'})
+            if meta_abstract and meta_abstract.get('content'):
+                return meta_abstract['content'].strip()
+            
+            # 备选方案：在页面内容中查找摘要
+            abstract_div = soup.find('blockquote', {'class': 'abstract'})
+            if abstract_div:
+                return abstract_div.text.replace('Abstract:', '').strip()
+            
+            return 'N/A'
+            
+        except Exception as e:
+            print(f"Error fetching abstract for {paper_id}: {e}")
+            return 'N/A'
 
 # 使用示例
 if __name__ == "__main__":

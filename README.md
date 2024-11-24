@@ -28,7 +28,7 @@ set ARK_API_KEY=YOUR_API_KEY # windows cmd
 ### 3. 运行程序
 
 ```bash
-python main.py
+python codes/main.py
 ```
 程序会生成一个 `output.md` 文件，包含分类后的论文列表。
 
